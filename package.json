@@ -9,7 +9,9 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts"
+    "dev": "ts-node src/index.ts",
+    "test": "vitest",
+    "test:watch": "vitest"
   },
   "keywords": [
     "mcp",
@@ -27,6 +29,7 @@
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.2.3",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   }
 }

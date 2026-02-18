@@ -4,6 +4,7 @@ import { Project, upsertProject } from './db.js';
 import { getGitInfo } from './git.js';
 import { isGitRepo, detectTechStack } from './lib/fs.js';
 import { createLogger } from './lib/logger.js';
+import { validatePath } from './lib/security.js';
 
 const logger = createLogger('Scanner');
 
@@ -39,6 +40,11 @@ export async function getProjectDescription(dirPath: string): Promise<string | n
 export async function scanDirectory(rootPath: string): Promise<Project[]> {
   const projects: Project[] = [];
   
+  // Validate path before scanning
+  // We allow scanning anything under the user's home directory as a safe default for local tools
+  // In a stricter environment, this should be configurable via env vars
+  await validatePath(rootPath, [process.env.HOME || process.cwd()]);
+
   try {
     const entries = await fs.readdir(rootPath, { withFileTypes: true });
     

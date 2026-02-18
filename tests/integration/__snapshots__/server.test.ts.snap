@@ -1,0 +1,33 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`MCP Server Integration > should list and get prompts 1`] = `
+{
+  "prompts": [
+    {
+      "arguments": [
+        {
+          "description": "Optional path to analyze",
+          "name": "path",
+          "required": false,
+        },
+      ],
+      "description": "Analyze the projects in the current workspace.",
+      "name": "analyze-projects",
+    },
+  ],
+}
+`;
+
+exports[`MCP Server Integration > should list and get prompts 2`] = `
+{
+  "messages": [
+    {
+      "content": {
+        "text": "Please analyze the projects in /test/path. First, list the projects to get an overview, then scan them to update the database, and finally provide an engagement report.",
+        "type": "text",
+      },
+      "role": "user",
+    },
+  ],
+}
+`;

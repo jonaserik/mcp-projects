@@ -1,0 +1,118 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Golden Protocol Test > should list prompts and match snapshot 1`] = `
+{
+  "prompts": [
+    {
+      "arguments": [
+        {
+          "description": "Optional path to analyze",
+          "name": "path",
+          "required": false,
+        },
+      ],
+      "description": "Analyze the projects in the current workspace.",
+      "name": "analyze-projects",
+    },
+  ],
+}
+`;
+
+exports[`Golden Protocol Test > should list resources and match snapshot 1`] = `
+{
+  "resources": [
+    {
+      "name": "projects-summary",
+      "uri": "projects://summary",
+    },
+  ],
+}
+`;
+
+exports[`Golden Protocol Test > should list tools and match snapshot 1`] = `
+{
+  "tools": [
+    {
+      "description": "Analyzes activity (git commits, file modifications) for a specific project or all projects.",
+      "execution": {
+        "taskSupport": "forbidden",
+      },
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "project_path": {
+            "description": "Path to the project to analyze. If omitted, analyzes all tracked projects.",
+            "type": "string",
+          },
+        },
+        "type": "object",
+      },
+      "name": "analyze_project_activity",
+    },
+    {
+      "description": "Returns a report of Most Active and Dormant projects.",
+      "execution": {
+        "taskSupport": "forbidden",
+      },
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {},
+        "type": "object",
+      },
+      "name": "get_engagement_report",
+    },
+    {
+      "description": "Returns a health check of projects, focusing on git synchronization status.",
+      "execution": {
+        "taskSupport": "forbidden",
+      },
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {},
+        "type": "object",
+      },
+      "name": "get_project_health",
+    },
+    {
+      "description": "List tracked projects from the database with pagination.",
+      "execution": {
+        "taskSupport": "forbidden",
+      },
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "limit": {
+            "default": 20,
+            "description": "Number of projects to return (default: 20, max: 50)",
+            "type": "number",
+          },
+          "offset": {
+            "default": 0,
+            "description": "Offset for pagination (default: 0)",
+            "type": "number",
+          },
+        },
+        "type": "object",
+      },
+      "name": "list_projects",
+    },
+    {
+      "description": "Scans a directory for projects (Node,.js, Python, etc) and updates the database.",
+      "execution": {
+        "taskSupport": "forbidden",
+      },
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "root_path": {
+            "description": "Root path to scan. Defaults to current working directory.",
+            "type": "string",
+          },
+        },
+        "type": "object",
+      },
+      "name": "scan_projects",
+    },
+  ],
+}
+`;

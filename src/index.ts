@@ -4,6 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { initDatabase, closeDatabase, getDatabase } from "./db.js";
 import { createLogger } from "./lib/logger.js";
+import { withErrorHandling } from "./lib/errors.js";
 
 const logger = createLogger('Main');
 
@@ -31,33 +32,24 @@ server.tool(
   {
     root_path: z.string().optional().describe("Root path to scan. Defaults to current working directory.")
   },
-  async ({ root_path }) => {
+  withErrorHandling("scan_projects", async ({ root_path }) => {
     const root = root_path || process.cwd();
-    try {
-      const projects = await scanDirectory(root);
-      
-      // Trigger activity analysis for all scanned projects
-      logger.info(`Starting activity analysis for ${projects.length} projects...`);
-      for (const project of projects) {
-          await analyzeProjectActivity(project.path);
-      }
-      
-      return {
-        content: [{ 
-          type: "text", 
-          text: `Scanned and analyzed ${projects.length} projects in ${root}:\n${projects.map(p => `- ${p.name} (${p.tech_stack})`).join('\n')}` 
-        }]
-      };
-    } catch (error) {
-       // Check if error is an instance of Error
-       const errorMessage = error instanceof Error ? error.message : String(error);
-       logger.error(`Error scanning directory`, error);
-       return {
-        content: [{ type: "text", text: `Error scanning directory: ${errorMessage}` }],
-        isError: true
-      };
+    // validatePath is called inside scanDirectory
+    const projects = await scanDirectory(root);
+    
+    // Trigger activity analysis for all scanned projects
+    logger.info(`Starting activity analysis for ${projects.length} projects...`);
+    for (const project of projects) {
+        await analyzeProjectActivity(project.path);
     }
-  }
+    
+    return {
+      content: [{ 
+        type: "text", 
+        text: `Scanned and analyzed ${projects.length} projects in ${root}:\n${projects.map(p => `- ${p.name} (${p.tech_stack})`).join('\n')}` 
+      }]
+    };
+  })
 );
 
 // Tool to manually trigger activity analysis
@@ -67,7 +59,7 @@ server.tool(
     {
         project_path: z.string().optional().describe("Path to the project to analyze. If omitted, analyzes all tracked projects.")
     },
-    async ({ project_path }) => {
+    withErrorHandling("analyze_project_activity", async ({ project_path }) => {
         const db = getDatabase();
         if (project_path) {
             await analyzeProjectActivity(project_path);
@@ -83,21 +75,40 @@ server.tool(
                 content: [{ type: "text", text: `Analyzed activity for all ${projects.length} projects.` }]
             };
         }
-    }
+    })
 );
 
-// Tool to list projects
+// Tool to list projects (Paginated)
 server.tool(
   "list_projects",
-  "List all tracked projects from the database.",
-  {},
-  async () => {
+  "List tracked projects from the database with pagination.",
+  {
+    limit: z.number().optional().default(20).describe("Number of projects to return (default: 20, max: 50)"),
+    offset: z.number().optional().default(0).describe("Offset for pagination (default: 0)")
+  },
+  withErrorHandling("list_projects", async ({ limit, offset }) => {
     const db = getDatabase();
-    const projects = db.prepare('SELECT * FROM projects ORDER BY name').all();
+    // Enforce max limit for performance
+    const safeLimit = Math.min(limit, 50);
+    
+    const projects = db.prepare('SELECT * FROM projects ORDER BY name LIMIT ? OFFSET ?').all(safeLimit, offset);
+    const total = db.prepare('SELECT COUNT(*) as count FROM projects').get() as { count: number };
+
     return {
-      content: [{ type: "text", text: JSON.stringify(projects, null, 2) }]
+      content: [{ 
+        type: "text", 
+        text: JSON.stringify({
+            data: projects,
+            pagination: {
+                limit: safeLimit,
+                offset,
+                total: total.count,
+                has_more: offset + safeLimit < total.count
+            }
+        }, null, 2) 
+      }]
     };
-  }
+  })
 );
 
 // Tool to get project health (Git status)
@@ -105,7 +116,7 @@ server.tool(
   "get_project_health",
   "Returns a health check of projects, focusing on git synchronization status.",
   {},
-  async () => {
+  withErrorHandling("get_project_health", async () => {
     const db = getDatabase();
 
     // Use an interface for the query result
@@ -143,7 +154,7 @@ server.tool(
     return {
       content: [{ type: "text", text: report }]
     };
-  }
+  })
 );
 
 // Tool to get engagement report
@@ -151,7 +162,7 @@ server.tool(
     "get_engagement_report",
     "Returns a report of Most Active and Dormant projects.",
     {},
-    async () => {
+    withErrorHandling("get_engagement_report", async () => {
         const db = getDatabase();
 
         // Most Active: Projects with activity in last 7 days
@@ -217,6 +228,57 @@ server.tool(
 
         return {
             content: [{ type: "text", text: report }]
+        };
+    })
+);
+
+// Resource: Project Summary
+server.resource(
+  "projects-summary",
+  "projects://summary",
+  async (uri: URL) => {
+    const db = getDatabase();
+    const total = db.prepare('SELECT COUNT(*) as count FROM projects').get() as { count: number };
+    const active = db.prepare(`
+        SELECT COUNT(DISTINCT project_id) as count 
+        FROM activity_stats 
+        WHERE date >= date('now', '-7 days')
+    `).get() as { count: number };
+
+    const summary = {
+        total_projects: total.count,
+        active_last_7_days: active.count,
+        generated_at: new Date().toISOString()
+    };
+
+    return {
+      contents: [{
+        uri: uri.href,
+        mimeType: "application/json",
+        text: JSON.stringify(summary, null, 2)
+      }]
+    };
+  }
+);
+
+// Prompt: Analyze Projects
+server.prompt(
+    "analyze-projects",
+    "Analyze the projects in the current workspace.",
+    {
+        path: z.string().optional().describe("Optional path to analyze")
+    },
+    ({ path }) => {
+        return {
+            messages: [
+                {
+                    role: "user",
+                    content: {
+                        type: "text",
+                        text: `Please analyze the projects in ${path || "the current directory"}. First, list the projects to get an overview, then scan them to update the database, and finally provide an engagement report.`
+                    }
+                }
+            ]
         };
     }
 );
