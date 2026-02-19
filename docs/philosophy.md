@@ -1,18 +1,19 @@
-# Filosofia de Engenharia de Contexto
+# Princípios e Diretrizes de Engenharia
 
-Este documento rege o comportamento dos agentes que utilizam ou modificam este MCP.
+Este documento estabelece as diretrizes arquiteturais e operacionais para a construção e manutenção de servidores integrados a este MCP.
 
-## 1. Integridade de Dados
-* **O SQLite é a Verdade:** Documentos de texto são voláteis; dados estruturados no banco de dados são permanentes. Toda decisão importante deve ser atomizada em tabelas.
-* **Validação em Primeiro Lugar:** Nenhuma ferramenta deve aceitar inputs sem um schema **Zod** correspondente. Erros de validação devem ser informativos para o usuário.
+## 1. Persistência e Integridade de Dados
+* **Fonte Única de Verdade:** Dados primários e lógicas de estado fundamentais devem ser gerenciados e persistidos no banco de dados SQLite. Isso garante atomicidade, durabilidade e conscistência para as operações em oposição as práticas voláteis no gerenciamento em memória ou arquivos descentralizados.
+* **Contrato Estrito de Comunicação (Validação):** Entradas e saídas de ferramentas devem ser integralmente cobertas por definições de esquema correspondentes com **Zod**. Os retornos de validação e de erros devem prover o máximo de clareza contextual.
 
-## 2. Comunicação e Debugging
-* **O Silêncio do Stdout:** O canal `stdout` é exclusivo para o protocolo JSON-RPC do MCP. **Nunca** use `console.log` para mensagens de texto comuns.
-* **Logs no Stderr:** Todas as mensagens de status, progresso ou erros técnicos devem ser enviadas exclusivamente via `console.error` (canal `stderr`).
+## 2. Padrões de Comunicação e Depuração
+* **Governança do Stdout:** O canal `stdout` é reservado e exclusivo para o envio e transações do protocolo JSON-RPC requerido pelo MCP. Nenhuma operação fora destas especificações deve imprimir mensagens ou logs corriqueiros neste canal.
+* **Observabilidade via Stderr:** Para o suporte sistêmico, acompanhamento de execução de tarefas, captura de progresso ou erros de implementação, as saídas devem ser direcionadas ao uso do canal secundário `stderr` (ex: `console.error`).
 
-## 3. Contexto sem Redundância
-* **Aprendizado Único:** O objetivo deste sistema é eliminar a redundância. Se uma informação foi salva através deste MCP, ela não deve ser perguntada novamente em sessões futuras.
-* **Consciência Situacional:** O agente deve sempre consultar o `get_context` antes de sugerir mudanças arquiteturais pesadas.
+## 3. Consolidação de Contexto
+* **Eficiência e Evitação de Redundância:** O sistema visa prover um mecanismo local sustentável. Informações ativamente resolvidas ou indexadas durante a operação do MCP não devem necessitar requisições persistentes adicionais que sobrecarreguem o ciclo.
+* **Consciência Situacional Contínua:** Antes de sugerir implementações massivas ou reformulações sistêmicas, os fluxos devem consultar agressivamente as abstrações contendo informações de estado para direcionamento técnico, suportando ações deliberadas e conscientes.
 
-## 4. Hardware e Performance
-* **Otimização M4:** O código deve ser leve e aproveitar a eficiência de threads do Apple Silicon. Operações de I/O de banco de dados devem ser otimizadas para evitar bloqueios da interface da IDE.
+## 4. Requisitos Constantes de Performance
+* **Eficiência Computacional:** A base de código requer um comportamento responsivo, orientando-se a abordagens não bloqueantes no Node.js, e prioridade total na otimização nas consultas e operações intensivas de I/O em banco de dados, resultando em um perfil reduzido de tempo de resposta global em interações contínuas nas IDEs clientes.
+
